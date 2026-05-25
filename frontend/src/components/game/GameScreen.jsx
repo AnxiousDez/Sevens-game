@@ -31,9 +31,11 @@ export default function GameScreen() {
         <PlayersSidebar />
 
         <div className="game-center">
-          <GameBoard board={gameState.board} theme={boardTheme} />
-          <div className={cardTheme}>
-            <PlayerHand />
+          <div className="game-play-stack">
+            <GameBoard board={gameState.board} theme={boardTheme} />
+            <div className={`hand-theme-wrap ${cardTheme}`}>
+              <PlayerHand />
+            </div>
           </div>
         </div>
       </div>

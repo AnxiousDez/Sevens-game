@@ -1221,4 +1221,145 @@ input:focus { border-color: var(--accent); }
   .card-center-suit { font-size: 20px; }
   .card-val { font-size: 12px; }
   .turn-timer { min-width: 160px; }
+
+  .game-center {
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .player-hand-container { max-width: 100%; min-width: 0; overflow: visible; }
+  .player-hand-fan--scroll {
+    overflow-x: auto;
+    overflow-y: visible;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    touch-action: pan-x;
+    padding-bottom: 10px;
+  }
+  .player-hand-fan--scroll .hand-card-wrap {
+    scroll-snap-align: center;
+    margin-left: -14px;
+  }
+  .player-hand-fan--scroll .hand-card-wrap:first-child { margin-left: 4px; }
+  .player-hand-fan--scroll .hand-card-wrap:last-child { margin-right: 8px; }
+}
+
+.hand-scroll-hint {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin: 0;
+  opacity: 0.85;
+}
+
+/* Phone landscape — short viewport, need full hand visible via scroll */
+@media (orientation: landscape) and (max-height: 520px) {
+  .game-topbar {
+    padding: 6px 10px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .round-info { font-size: 11px; }
+  .room-code-display.room-code-compact { max-width: 140px; padding: 4px 8px; }
+  .room-code-value { font-size: 13px; }
+  .turn-timer { min-width: 120px; transform: scale(0.9); transform-origin: right center; }
+
+  .game-layout {
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .players-sidebar {
+    width: 100%;
+    max-height: 52px;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-shrink: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+  .players-sidebar .sidebar-title { display: none; }
+  .players-sidebar .sidebar-economy {
+    flex-direction: row;
+    gap: 8px;
+    font-size: 10px;
+    flex-shrink: 0;
+    margin: 0;
+  }
+  .sidebar-player {
+    flex-shrink: 0;
+    padding: 4px 8px;
+    min-width: 0;
+  }
+  .sidebar-avatar { width: 24px; height: 24px; font-size: 11px; }
+  .sidebar-name { font-size: 11px; max-width: 72px; }
+  .sidebar-stats { flex-direction: row; gap: 4px; }
+
+  .game-center {
+    padding: 8px 10px;
+    gap: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+  }
+
+  .game-board {
+    padding: 10px 8px 8px;
+    transform: scale(0.92);
+    transform-origin: top center;
+  }
+
+  .player-hand-container {
+    padding: 8px 8px 6px;
+    max-width: 100%;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+
+  .hand-label { font-size: 11px; min-height: 16px; }
+
+  .player-hand-fan,
+  .player-hand-fan--scroll {
+    min-height: 78px;
+    padding: 4px 4px 8px;
+    overflow-x: auto;
+    overflow-y: visible;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    touch-action: pan-x;
+  }
+
+  .hand-card-wrap {
+    margin-left: -10px;
+    scroll-snap-align: center;
+  }
+  .hand-card-wrap:first-child { margin-left: 4px; }
+  .hand-card-wrap:last-child { margin-right: 6px; }
+
+  .card {
+    width: 42px;
+    height: 60px;
+  }
+  .card-center-suit { font-size: 16px; }
+  .card-val { font-size: 10px; }
+  .card-corner { font-size: 9px; }
+
+  .play-confirm {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .btn-play, .btn-cancel {
+    font-size: 12px;
+    padding: 8px 14px;
+  }
 }

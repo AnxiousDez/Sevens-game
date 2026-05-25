@@ -1,11 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Card from './Card';
 import { isValidMove as checkValid } from '../../utils/cards';
 import { socket } from '../../socket';
 import { useGameStore } from '../../store/gameStore';
 
-function getFanTransform(index, total, lift = 0) {
+/** Flat scrollable row on phones (especially landscape) so every card stays reachable */
+function useCompactHand() {
+  const [compact, setCompact] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia(
+      '(max-width: 640px), (orientation: landscape) and (max-height: 520px)'
+    );
+    const update = () => setCompact(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  return compact;
+}
+
+function getFanTransform(index, total, lift = 0, compact = false) {
   if (total <= 0) return { transform: `translateY(${lift}px)`, zIndex: 0 };
+
+  if (compact) {
+    return {
+      transform: `translateY(${lift}px)`,
+      zIndex: index + 1,
+    };
+  }
 
   const center = (total - 1) / 2;
   const offset = index - center;
@@ -21,9 +45,17 @@ function getFanTransform(index, total, lift = 0) {
 
 export default function PlayerHand() {
   const { gameState, playerId, wallet } = useGameStore();
+  const compact = useCompactHand();
   const cardTheme = wallet?.equippedCards ?? 'cards-default';
   const [selected, setSelected] = useState(null);
   const [playing, setPlaying] = useState(false);
+  const fanRef = useRef(null);
+
+  useEffect(() => {
+    if (!compact || !selected || !fanRef.current) return;
+    const el = fanRef.current.querySelector('.hand-card-selected');
+    el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [selected, compact]);
 
   const hand = gameState?.hand ?? [];
   const validMoves = gameState?.validMoves ?? [];
@@ -69,12 +101,16 @@ export default function PlayerHand() {
         }
       </div>
 
-      <div className="player-hand-fan">
+      {compact && hand.length > 5 && (
+        <p className="hand-scroll-hint">Swipe sideways to see all cards →</p>
+      )}
+
+      <div ref={fanRef} className={`player-hand-fan${compact ? ' player-hand-fan--scroll' : ''}`}>
         {hand.map((card, i) => {
           const valid = checkValid(card, validMoves);
           const isSel = selected?.suit === card.suit && selected?.value === card.value;
-          const lift = isSel ? -48 : (isMyTurn && valid ? -24 : 0);
-          const fan = getFanTransform(i, hand.length, lift);
+          const lift = isSel ? (compact ? -20 : -48) : (isMyTurn && valid ? (compact ? -10 : -24) : 0);
+          const fan = getFanTransform(i, hand.length, lift, compact);
 
           return (
             <div

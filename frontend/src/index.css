@@ -749,10 +749,6 @@ input:focus { border-color: var(--accent); }
   justify-content: flex-start;
 }
 
-.player-hand-container--hand-bar .play-confirm {
-  flex-shrink: 0;
-}
-
 .hand-card-wrap {
   flex-shrink: 0;
   margin-left: var(--hand-overlap, -12px);

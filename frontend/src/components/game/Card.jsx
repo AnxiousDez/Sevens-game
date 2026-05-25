@@ -12,9 +12,13 @@ export default function Card({
   selectable,
   selected,
   onClick,
+  onDoubleClick,
   small,
   faceDown,
 }) {
+  const clickProps = selectable
+    ? { onClick, onDoubleClick, role: 'button' }
+    : {};
   const isRed = card?.suit === 'hearts' || card?.suit === 'diamonds';
   const artTheme = isArtCardTheme(themeId);
   const pixelArt = isPixelArtCardTheme(themeId);
@@ -51,9 +55,8 @@ export default function Card({
       return (
         <div
           className={classes}
-          onClick={selectable ? onClick : undefined}
+          {...clickProps}
           title={selectable ? `Play ${cardLabel(card.value)}${SUIT_SYMBOLS[card.suit]}` : undefined}
-          role={selectable ? 'button' : undefined}
         >
           <img src={art.src} style={art.imgStyle} alt="" draggable={false} />
         </div>
@@ -63,7 +66,7 @@ export default function Card({
     return (
       <div
         className={classes}
-        onClick={selectable ? onClick : undefined}
+        {...clickProps}
         title={selectable ? `Play ${cardLabel(card.value)}${SUIT_SYMBOLS[card.suit]}` : undefined}
       >
         <img
@@ -84,7 +87,7 @@ export default function Card({
         selected ? 'card-selected' : '',
         small ? 'card-sm' : '',
       ].filter(Boolean).join(' ')}
-      onClick={selectable ? onClick : undefined}
+      {...clickProps}
       title={selectable ? `Play ${cardLabel(card.value)}${SUIT_SYMBOLS[card.suit]}` : undefined}
     >
       <div className="card-corner card-tl">

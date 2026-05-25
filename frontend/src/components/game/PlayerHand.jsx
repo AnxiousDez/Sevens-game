@@ -91,6 +91,8 @@ function getFanTransform(index, total, lift = 0, compact = false) {
   };
 }
 
+const DOUBLE_TAP_MS = 350;
+
 export default function PlayerHand() {
   const { gameState, playerId, wallet } = useGameStore();
   const compact = useCompactHand();
@@ -98,33 +100,58 @@ export default function PlayerHand() {
   const [selected, setSelected] = useState(null);
   const [playing, setPlaying] = useState(false);
   const fanRef = useRef(null);
+  const lastTapRef = useRef({ key: null, time: 0 });
   const hand = gameState?.hand ?? [];
   const { overlap, needsScroll } = useHandOverlap(fanRef, hand.length, compact);
+  const validMoves = gameState?.validMoves ?? [];
+  const isMyTurn = gameState?.currentPlayer === playerId;
+
+  useEffect(() => {
+    if (!isMyTurn) {
+      setSelected(null);
+      lastTapRef.current = { key: null, time: 0 };
+    }
+  }, [isMyTurn]);
 
   useEffect(() => {
     if (!compact || !selected || !fanRef.current) return;
     const el = fanRef.current.querySelector('.hand-card-selected');
     el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }, [selected, compact]);
-
-  const validMoves = gameState?.validMoves ?? [];
-  const isMyTurn = gameState?.currentPlayer === playerId;
   const isFirstTurn = Object.values(gameState?.board ?? {}).every((range) => range === null);
   const mustPlaySevenSpades = isFirstTurn
     && validMoves.length === 1
     && validMoves[0]?.suit === 'spades'
     && validMoves[0]?.value === 7;
 
-  function handleCardClick(card) {
-    if (!isMyTurn) return;
-    const valid = checkValid(card, validMoves);
-    if (!valid) return;
+  function cardKey(card) {
+    return `${card.suit}-${card.value}`;
+  }
 
-    if (selected && selected.suit === card.suit && selected.value === card.value) {
+  function handleCardClick(card, event) {
+    if (!isMyTurn || playing) return;
+    if (!checkValid(card, validMoves)) return;
+    if (event?.detail > 1) return;
+
+    const key = cardKey(card);
+    const now = Date.now();
+    const last = lastTapRef.current;
+
+    if (last.key === key && now - last.time < DOUBLE_TAP_MS) {
+      lastTapRef.current = { key: null, time: 0 };
       playCard(card);
-    } else {
-      setSelected(card);
+      return;
     }
+
+    lastTapRef.current = { key, time: now };
+    setSelected(card);
+  }
+
+  function handleCardDoubleClick(card) {
+    if (!isMyTurn || playing) return;
+    if (!checkValid(card, validMoves)) return;
+    lastTapRef.current = { key: null, time: 0 };
+    playCard(card);
   }
 
   function playCard(card) {
@@ -150,7 +177,7 @@ export default function PlayerHand() {
           {mustPlaySevenSpades
             ? <span className="your-turn-label">Play 7♠</span>
             : validMoves.length > 0
-              ? <span className="your-turn-label">Tap card twice to play</span>
+              ? <span className="your-turn-label">Double-tap or double-click a card to play</span>
               : <span className="skip-label">No moves — skip</span>}
         </div>
       )}
@@ -167,7 +194,7 @@ export default function PlayerHand() {
         {hand.map((card, i) => {
           const valid = checkValid(card, validMoves);
           const isSel = selected?.suit === card.suit && selected?.value === card.value;
-          const lift = isSel ? (compact ? -20 : -48) : (isMyTurn && valid ? (compact ? -10 : -24) : 0);
+          const lift = isSel ? (compact ? -16 : -32) : (isMyTurn && valid ? (compact ? -8 : -16) : 0);
           const fan = getFanTransform(i, hand.length, lift, compact);
 
           return (
@@ -188,21 +215,13 @@ export default function PlayerHand() {
                 themeId={cardTheme}
                 selectable={isMyTurn && valid}
                 selected={isSel}
-                onClick={() => handleCardClick(card)}
+                onClick={(e) => handleCardClick(card, e)}
+                onDoubleClick={() => handleCardDoubleClick(card)}
               />
             </div>
           );
         })}
       </div>
-
-      {selected && (
-        <div className="play-confirm">
-          <button className="btn-play" onClick={() => playCard(selected)} disabled={playing}>
-            {playing ? 'Playing...' : 'Play selected card'}
-          </button>
-          <button className="btn-cancel" onClick={() => setSelected(null)}>Cancel</button>
-        </div>
-      )}
     </div>
   );
 }

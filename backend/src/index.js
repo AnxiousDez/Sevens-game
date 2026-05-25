@@ -6,10 +6,13 @@ const { kv } = require('./store/kv');
 const { REDIS_URL, CLIENT_ORIGINS, PORT, HOST } = require('./config');
 
 const LAN_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+):5173$/;
+/** Any Vercel deployment (production + preview URLs) */
+const VERCEL_ORIGIN = /^https:\/\/[a-z0-9-]+(-[a-z0-9-]+)*\.vercel\.app$/i;
 
 function isAllowedOrigin(origin) {
   if (!origin) return true;
   if (CLIENT_ORIGINS.includes(origin)) return true;
+  if (process.env.NODE_ENV === 'production' && VERCEL_ORIGIN.test(origin)) return true;
   if (process.env.NODE_ENV !== 'production' && LAN_ORIGIN.test(origin)) return true;
   return false;
 }
@@ -18,6 +21,7 @@ async function main() {
   await kv.init(REDIS_URL);
 
   const app = express();
+  app.set('trust proxy', 1);
   const server = http.createServer(app);
 
   const io = new Server(server, {

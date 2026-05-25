@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { socket, refreshWallet } from '../../socket';
+import { socket, refreshWallet, SERVER_URL } from '../../socket';
 import { useGameStore } from '../../store/gameStore';
 import { setStoredRoomId, setStoredSeatToken, screenForGameState, setLeftRoom } from '../../utils/session';
 import ShopPanel from '../shop/ShopPanel';
@@ -26,12 +26,36 @@ export default function HomeScreen() {
 
   function connect(cb) {
     setPlayerName(name.trim());
-    if (!socket.connected) {
-      socket.connect();
-      socket.once('connect', cb);
-    } else {
+    if (socket.connected) {
+      cb();
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      setLoading(false);
+      setError(`Connection timed out to ${SERVER_URL}`);
+    }, 15000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      socket.off('connect', onConnect);
+      socket.off('connect_error', onFail);
+    }
+
+    function onConnect() {
+      cleanup();
       cb();
     }
+
+    function onFail() {
+      cleanup();
+      setLoading(false);
+    }
+
+    socket.once('connect', onConnect);
+    socket.once('connect_error', onFail);
+    socket.connect();
   }
 
   function handleCreate() {

@@ -2,8 +2,11 @@ import { io } from 'socket.io-client';
 
 /** Use page hostname so shop/wallet work when your network IP changes day to day. */
 function resolveServerUrl() {
-  const configured = import.meta.env.VITE_SERVER_URL?.trim();
+  const configured = import.meta.env.VITE_SERVER_URL?.trim().replace(/\/$/, '');
   if (configured) return configured;
+  if (import.meta.env.PROD) {
+    console.error('VITE_SERVER_URL is missing — set it on Vercel to your Railway URL and redeploy.');
+  }
   return `http://${window.location.hostname}:3001`;
 }
 

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { socket, refreshWallet } from '../socket';
+import { socket, refreshWallet, SERVER_URL } from '../socket';
 import { useGameStore } from '../store/gameStore';
 import {
   getStoredRoomId,
@@ -73,7 +73,10 @@ export function useSocketEvents() {
     socket.on('disconnect', () => setConnected(false));
     socket.on('connect_error', () => {
       setConnected(false);
-      setError('Cannot reach game server — check that the backend is running and VITE_SERVER_URL points to it.');
+      const hint = import.meta.env.VITE_SERVER_URL
+        ? `Trying ${SERVER_URL} — check Railway is running and CLIENT_ORIGIN allows this site.`
+        : `VITE_SERVER_URL is not set on Vercel. Add your Railway URL (https://….up.railway.app) and redeploy. Currently trying ${SERVER_URL}.`;
+      setError(`Cannot reach game server — ${hint}`);
     });
 
     socket.on('game:state', (state) => {

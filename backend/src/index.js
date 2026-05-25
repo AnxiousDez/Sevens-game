@@ -24,10 +24,14 @@ async function main() {
     cors: {
       origin: (origin, cb) => {
         if (isAllowedOrigin(origin)) cb(null, true);
-        else cb(new Error(`CORS blocked: ${origin}`));
+        else {
+          console.warn(`CORS blocked: ${origin}`);
+          cb(new Error(`CORS blocked: ${origin}`));
+        }
       },
       methods: ['GET', 'POST'],
     },
+    transports: ['websocket', 'polling'],
   });
 
   app.use(cors({

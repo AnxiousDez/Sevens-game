@@ -78,12 +78,10 @@ export default function HomeScreen() {
         <h1 className="game-title">SEVENS</h1>
         <p className="game-subtitle">The strategic card game</p>
         <div className="home-actions">
-          {wallet && (
-            <div className="home-wallet">
-              <span>🪙 {wallet.coins} coins</span>
-              <button type="button" className="btn-shop-link" onClick={() => setShowShop(true)}>Shop</button>
-            </div>
-          )}
+          <div className="home-wallet">
+            <span>🪙 {wallet ? wallet.coins : '—'} coins</span>
+            <button type="button" className="btn-shop-link" onClick={() => setShowShop(true)}>Shop</button>
+          </div>
           <button type="button" className="btn-rules-link" onClick={() => setShowRules(true)}>How to Play</button>
         </div>
       </div>

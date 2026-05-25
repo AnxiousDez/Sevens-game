@@ -1,16 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import Card from './Card';
 import { isValidMove as checkValid } from '../../utils/cards';
 import { socket } from '../../socket';
 import { useGameStore } from '../../store/gameStore';
 
-/** Flat scrollable row on phones (especially landscape) so every card stays reachable */
+/** Flat scrollable row on phones / short windows so every card stays reachable */
 function useCompactHand() {
   const [compact, setCompact] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia(
-      '(max-width: 640px), (orientation: landscape) and (max-height: 520px)'
+      '(max-width: 640px), (max-height: 720px), (orientation: landscape) and (max-height: 600px)'
     );
     const update = () => setCompact(mq.matches);
     update();
@@ -21,7 +21,51 @@ function useCompactHand() {
   return compact;
 }
 
-function getFanTransform(index, total, lift = 0, compact = false) {
+/** Spread cards to fill the hand row; scroll only when they still overflow */
+function useHandOverlap(fanRef, cardCount, compact) {
+  const [overlap, setOverlap] = useState(-12);
+  const [needsScroll, setNeedsScroll] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = fanRef.current;
+    if (!el || cardCount <= 1) {
+      setOverlap(0);
+      setNeedsScroll(false);
+      return;
+    }
+
+    const measure = () => {
+      const avail = el.clientWidth - 24;
+      const cardW = el.querySelector('.card')?.offsetWidth ?? 64;
+      const isMobile = window.innerWidth <= 640;
+      const minPeek = compact || isMobile ? 30 : 36;
+      const minOverlap = Math.min(-2, -(cardW - minPeek));
+      const maxGap = compact ? 4 : 10;
+
+      let next = (avail - cardCount * cardW) / (cardCount - 1);
+      next = Math.min(maxGap, Math.max(minOverlap, next));
+
+      const totalW = cardW + (cardCount - 1) * (cardW + next);
+      setOverlap(next);
+      setNeedsScroll(totalW > avail + 4);
+    };
+
+    measure();
+    const raf = requestAnimationFrame(measure);
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [fanRef, cardCount, compact]);
+
+  return { overlap, needsScroll };
+}
+
+function getFanTransform(index, total, lift = 0, compact = false, overlap = -20) {
   if (total <= 0) return { transform: `translateY(${lift}px)`, zIndex: 0 };
 
   if (compact) {
@@ -33,9 +77,10 @@ function getFanTransform(index, total, lift = 0, compact = false) {
 
   const center = (total - 1) / 2;
   const offset = index - center;
-  const maxAngle = Math.min(6 + total * 2.2, 32);
+  const spread = overlap > -8 ? 0.25 : overlap > -14 ? 0.5 : overlap > -20 ? 0.75 : 1;
+  const maxAngle = Math.min(5 + total * 1.8, 26) * spread;
   const rotation = total === 1 ? 0 : (-maxAngle / 2) + (index * maxAngle / (total - 1));
-  const arcDrop = Math.pow(Math.abs(offset) / Math.max(center, 1), 1.6) * 10;
+  const arcDrop = Math.pow(Math.abs(offset) / Math.max(center, 1), 1.6) * 8 * spread;
 
   return {
     transform: `rotate(${rotation}deg) translateY(${arcDrop + lift}px)`,
@@ -50,6 +95,8 @@ export default function PlayerHand() {
   const [selected, setSelected] = useState(null);
   const [playing, setPlaying] = useState(false);
   const fanRef = useRef(null);
+  const hand = gameState?.hand ?? [];
+  const { overlap, needsScroll } = useHandOverlap(fanRef, hand.length, compact);
 
   useEffect(() => {
     if (!compact || !selected || !fanRef.current) return;
@@ -57,7 +104,6 @@ export default function PlayerHand() {
     el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }, [selected, compact]);
 
-  const hand = gameState?.hand ?? [];
   const validMoves = gameState?.validMoves ?? [];
   const isMyTurn = gameState?.currentPlayer === playerId;
   const isFirstTurn = Object.values(gameState?.board ?? {}).every((range) => range === null);
@@ -101,16 +147,24 @@ export default function PlayerHand() {
         }
       </div>
 
-      {compact && hand.length > 5 && (
+      {(compact || needsScroll) && hand.length > 5 && (
         <p className="hand-scroll-hint">Swipe sideways to see all cards →</p>
       )}
 
-      <div ref={fanRef} className={`player-hand-fan${compact ? ' player-hand-fan--scroll' : ''}`}>
+      <div
+        ref={fanRef}
+        className={[
+          'player-hand-fan',
+          compact ? 'player-hand-fan--scroll' : '',
+          needsScroll ? 'player-hand-fan--overflow' : '',
+        ].filter(Boolean).join(' ')}
+        style={{ '--hand-overlap': `${overlap}px` }}
+      >
         {hand.map((card, i) => {
           const valid = checkValid(card, validMoves);
           const isSel = selected?.suit === card.suit && selected?.value === card.value;
           const lift = isSel ? (compact ? -20 : -48) : (isMyTurn && valid ? (compact ? -10 : -24) : 0);
-          const fan = getFanTransform(i, hand.length, lift, compact);
+          const fan = getFanTransform(i, hand.length, lift, compact, overlap);
 
           return (
             <div

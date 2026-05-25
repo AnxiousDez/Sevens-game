@@ -71,11 +71,12 @@ export function useSocketEvents() {
       tryRejoinRoom({ setGameState, setScreen, setError, setWallet });
     });
     socket.on('disconnect', () => setConnected(false));
-    socket.on('connect_error', () => {
+    socket.on('connect_error', (err) => {
       setConnected(false);
+      const detail = err?.message || 'connection failed';
       const hint = import.meta.env.VITE_SERVER_URL
-        ? `Trying ${SERVER_URL} — check Railway is running and CLIENT_ORIGIN allows this site.`
-        : `VITE_SERVER_URL is not set on Vercel. Add your Railway URL (https://….up.railway.app) and redeploy. Currently trying ${SERVER_URL}.`;
+        ? `Trying ${SERVER_URL} (${detail}). Redeploy Railway after git push, then hard-refresh.`
+        : `VITE_SERVER_URL missing on Vercel. Currently trying ${SERVER_URL}.`;
       setError(`Cannot reach game server — ${hint}`);
     });
 

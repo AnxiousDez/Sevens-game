@@ -12,7 +12,7 @@ const VERCEL_ORIGIN = /^https:\/\/[a-z0-9-]+(-[a-z0-9-]+)*\.vercel\.app$/i;
 function isAllowedOrigin(origin) {
   if (!origin) return true;
   if (CLIENT_ORIGINS.includes(origin)) return true;
-  if (process.env.NODE_ENV === 'production' && VERCEL_ORIGIN.test(origin)) return true;
+  if (VERCEL_ORIGIN.test(origin) || origin.endsWith('.vercel.app')) return true;
   if (process.env.NODE_ENV !== 'production' && LAN_ORIGIN.test(origin)) return true;
   return false;
 }
@@ -27,21 +27,27 @@ async function main() {
   const io = new Server(server, {
     cors: {
       origin: (origin, cb) => {
-        if (isAllowedOrigin(origin)) cb(null, true);
-        else {
-          console.warn(`CORS blocked: ${origin}`);
-          cb(new Error(`CORS blocked: ${origin}`));
-        }
+        if (isAllowedOrigin(origin)) return cb(null, true);
+        console.warn(`Socket CORS blocked: ${origin}`);
+        cb(null, false);
       },
       methods: ['GET', 'POST'],
     },
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
+    allowEIO3: true,
+    pingTimeout: 60000,
+    pingInterval: 25000,
+  });
+
+  io.engine.on('connection_error', (err) => {
+    console.warn('Socket engine error:', err.code, err.message, err.context?.headers?.origin);
   });
 
   app.use(cors({
     origin: (origin, cb) => {
-      if (isAllowedOrigin(origin)) cb(null, true);
-      else cb(new Error(`CORS blocked: ${origin}`));
+      if (isAllowedOrigin(origin)) return cb(null, true);
+      console.warn(`HTTP CORS blocked: ${origin}`);
+      cb(null, false);
     },
   }));
   app.use(express.json());

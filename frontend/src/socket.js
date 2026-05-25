@@ -17,7 +17,9 @@ export const socket = io(SERVER_URL, {
   reconnection: true,
   reconnectionAttempts: 10,
   reconnectionDelay: 1000,
-  transports: ['websocket', 'polling'],
+  timeout: 20000,
+  /** Polling first — Railway/proxies often block WebSocket until polling session exists */
+  transports: ['polling', 'websocket'],
 });
 
 export function refreshWallet(playerId, setWallet) {

@@ -4,14 +4,12 @@ import { isValidMove as checkValid } from '../../utils/cards';
 import { socket } from '../../socket';
 import { useGameStore } from '../../store/gameStore';
 
-/** Flat scrollable row on phones / short windows so every card stays reachable */
+/** Flat scrollable row on portrait phones only */
 function useCompactHand() {
   const [compact, setCompact] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia(
-      '(max-width: 640px), (max-height: 720px), (orientation: landscape) and (max-height: 600px)'
-    );
+    const mq = window.matchMedia('(max-width: 640px) and (orientation: portrait)');
     const update = () => setCompact(mq.matches);
     update();
     mq.addEventListener('change', update);
@@ -38,12 +36,18 @@ function useHandOverlap(fanRef, cardCount, compact) {
       const avail = el.clientWidth - 24;
       const cardW = el.querySelector('.card')?.offsetWidth ?? 64;
       const isMobile = window.innerWidth <= 640;
-      const minPeek = compact || isMobile ? 30 : 36;
-      const minOverlap = Math.min(-2, -(cardW - minPeek));
-      const maxGap = compact ? 4 : 10;
+      const minPeek = compact || isMobile ? 30 : 32;
 
       let next = (avail - cardCount * cardW) / (cardCount - 1);
-      next = Math.min(maxGap, Math.max(minOverlap, next));
+      const minOverlap = Math.min(-2, -(cardW - minPeek));
+
+      if (compact) {
+        const maxGap = 4;
+        next = Math.min(maxGap, Math.max(minOverlap, next));
+      } else {
+        const maxOverlap = -6;
+        next = Math.min(maxOverlap, Math.max(minOverlap, next));
+      }
 
       const totalW = cardW + (cardCount - 1) * (cardW + next);
       setOverlap(next);
@@ -65,7 +69,7 @@ function useHandOverlap(fanRef, cardCount, compact) {
   return { overlap, needsScroll };
 }
 
-function getFanTransform(index, total, lift = 0, compact = false, overlap = -20) {
+function getFanTransform(index, total, lift = 0, compact = false) {
   if (total <= 0) return { transform: `translateY(${lift}px)`, zIndex: 0 };
 
   if (compact) {
@@ -77,10 +81,9 @@ function getFanTransform(index, total, lift = 0, compact = false, overlap = -20)
 
   const center = (total - 1) / 2;
   const offset = index - center;
-  const spread = overlap > -8 ? 0.25 : overlap > -14 ? 0.5 : overlap > -20 ? 0.75 : 1;
-  const maxAngle = Math.min(5 + total * 1.8, 26) * spread;
+  const maxAngle = Math.min(6 + total * 2.2, 32);
   const rotation = total === 1 ? 0 : (-maxAngle / 2) + (index * maxAngle / (total - 1));
-  const arcDrop = Math.pow(Math.abs(offset) / Math.max(center, 1), 1.6) * 8 * spread;
+  const arcDrop = Math.pow(Math.abs(offset) / Math.max(center, 1), 1.6) * 10;
 
   return {
     transform: `rotate(${rotation}deg) translateY(${arcDrop + lift}px)`,
@@ -134,28 +137,29 @@ export default function PlayerHand() {
     });
   }
 
-  return (
-    <div className="player-hand-container">
-      <div className="hand-label">
-        {isMyTurn
-          ? validMoves.length > 0
-            ? mustPlaySevenSpades
-              ? <span className="your-turn-label">First turn — you must play 7♠</span>
-              : <span className="your-turn-label">Your Turn — tap a card to select, tap again to play</span>
-            : <span className="skip-label">No valid moves — your turn will be skipped</span>
-          : <span className="wait-label">Your Hand ({hand.length} cards)</span>
-        }
-      </div>
+  const showTurnHint = isMyTurn && (
+    mustPlaySevenSpades
+    || validMoves.length > 0
+    || validMoves.length === 0
+  );
 
-      {(compact || needsScroll) && hand.length > 5 && (
-        <p className="hand-scroll-hint">Swipe sideways to see all cards →</p>
+  return (
+    <div className="player-hand-container player-hand-container--hand-bar">
+      {showTurnHint && (
+        <div className="hand-label">
+          {mustPlaySevenSpades
+            ? <span className="your-turn-label">Play 7♠</span>
+            : validMoves.length > 0
+              ? <span className="your-turn-label">Tap card twice to play</span>
+              : <span className="skip-label">No moves — skip</span>}
+        </div>
       )}
 
       <div
         ref={fanRef}
         className={[
           'player-hand-fan',
-          compact ? 'player-hand-fan--scroll' : '',
+          compact ? 'player-hand-fan--scroll' : 'player-hand-fan--hand-bar',
           needsScroll ? 'player-hand-fan--overflow' : '',
         ].filter(Boolean).join(' ')}
         style={{ '--hand-overlap': `${overlap}px` }}
@@ -164,7 +168,7 @@ export default function PlayerHand() {
           const valid = checkValid(card, validMoves);
           const isSel = selected?.suit === card.suit && selected?.value === card.value;
           const lift = isSel ? (compact ? -20 : -48) : (isMyTurn && valid ? (compact ? -10 : -24) : 0);
-          const fan = getFanTransform(i, hand.length, lift, compact, overlap);
+          const fan = getFanTransform(i, hand.length, lift, compact);
 
           return (
             <div

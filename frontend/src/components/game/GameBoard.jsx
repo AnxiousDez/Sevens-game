@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import { SUIT_SYMBOLS } from '../../utils/cards';
 
 const SUITS = ['spades', 'hearts', 'diamonds', 'clubs'];
@@ -56,16 +57,51 @@ function BoardRow({ suit, range }) {
 }
 
 export default function GameBoard({ board, theme = 'board-default' }) {
+  const zoneRef = useRef(null);
+  const boardRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const zone = zoneRef.current;
+    const el = boardRef.current;
+    if (!zone || !el) return;
+
+    const fit = () => {
+      el.style.transform = '';
+      const pad = 6;
+      const zw = zone.clientWidth - pad;
+      const zh = zone.clientHeight - pad;
+      const bw = el.offsetWidth;
+      const bh = el.offsetHeight;
+      if (!bw || !bh || !zw || !zh) return;
+
+      const scale = Math.min(zw / bw, zh / bh, 2.5);
+      if (Math.abs(scale - 1) > 0.02) {
+        el.style.transform = `scale(${Math.max(0.55, scale)})`;
+      }
+    };
+
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(zone);
+    window.addEventListener('resize', fit);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', fit);
+    };
+  }, [board]);
+
   if (!board) return null;
 
   return (
-    <div className={`game-board ${theme}`}>
-      <div className="board-felt-texture" aria-hidden="true" />
-      <div className="board-title">Table</div>
-      <div className="board-rows">
-        {SUITS.map(suit => (
-          <BoardRow key={suit} suit={suit} range={board[suit]} />
-        ))}
+    <div ref={zoneRef} className="game-board-zone">
+      <div ref={boardRef} className={`game-board ${theme}`}>
+        <div className="board-felt-texture" aria-hidden="true" />
+        <div className="board-title">Table</div>
+        <div className="board-rows">
+          {SUITS.map(suit => (
+            <BoardRow key={suit} suit={suit} range={board[suit]} />
+          ))}
+        </div>
       </div>
     </div>
   );

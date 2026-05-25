@@ -23,6 +23,13 @@ export default function RoundEndScreen() {
     });
   }
 
+  function handleEndMatch() {
+    if (!confirm('End the match now? Current scores will be final.')) return;
+    socket.emit('game:end_match', {}, (res) => {
+      if (res.error) return alert(res.error);
+    });
+  }
+
   return (
     <div className="overlay-backdrop">
       <Confetti active intensity="normal" />
@@ -65,7 +72,10 @@ export default function RoundEndScreen() {
         </div>
 
         {amHost && !gameOver && (
-          <button className="btn-primary" onClick={handleNext}>Start Next Round</button>
+          <div className="round-end-actions">
+            <button className="btn-primary" onClick={handleNext}>Start Next Round</button>
+            <button type="button" className="btn-end-match" onClick={handleEndMatch}>End Match</button>
+          </div>
         )}
         {!amHost && !gameOver && (
           <p className="waiting-msg">Waiting for host to start next round...</p>

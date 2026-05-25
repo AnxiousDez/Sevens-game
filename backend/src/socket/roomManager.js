@@ -21,6 +21,18 @@ class RoomManager {
     return { room, seatToken };
   }
 
+  async _resolveSeatToken(roomId, playerId, playerName, seatToken) {
+    const room = this.rooms.get(roomId);
+    const existingPlayer = room?.players.find(p => p.id === playerId);
+    if (!existingPlayer) return { error: 'You are not seated in this game' };
+
+    if (seatToken && await this.registry.verifySeat(roomId, playerId, seatToken)) {
+      return { ok: true, seatToken };
+    }
+    const { seatToken: newToken } = await this.registry.registerSeat(roomId, playerId, playerName);
+    return { ok: true, seatToken: newToken, recovered: true };
+  }
+
   async joinRoom(roomId, socketId, playerId, playerName, seatToken = null) {
     const room = this.rooms.get(roomId);
     if (!room) return { error: 'Room not found' };
@@ -29,12 +41,12 @@ class RoomManager {
     const existingPlayer = room.players.find(p => p.id === playerId);
 
     if (room.state !== GAME_STATES.WAITING) {
-      if (!seatToken) {
-        return { error: 'Seat token required to rejoin an active game' };
+      if (!existingPlayer) {
+        return { error: 'Game in progress — only players who were in this game can rejoin' };
       }
-      const valid = await this.registry.verifySeat(roomId, playerId, seatToken);
-      if (!valid) return { error: 'Invalid seat token' };
-      if (!existingPlayer) return { error: 'You are not seated in this game' };
+      const seatResult = await this._resolveSeatToken(roomId, playerId, playerName, seatToken);
+      if (seatResult.error) return seatResult;
+      seatToken = seatResult.seatToken;
 
       room.updateSocketId(playerId, socketId);
       if (playerName) {
@@ -77,8 +89,8 @@ class RoomManager {
       return this.joinRoom(roomId, socketId, playerId, playerName, seatToken);
     }
 
-    const valid = await this.registry.verifySeat(roomId, playerId, seatToken);
-    if (!valid) return { error: 'Invalid seat token' };
+    const seatResult = await this._resolveSeatToken(roomId, playerId, playerName, seatToken);
+    if (seatResult.error) return seatResult;
 
     const player = room.players.find(p => p.id === playerId);
     if (!player) return { error: 'You are not seated in this game' };
@@ -89,7 +101,7 @@ class RoomManager {
 
     this.socketToPlayer.set(socketId, { playerId, roomId });
     this.playerToRoom.set(playerId, roomId);
-    return { ok: true, room, seatToken };
+    return { ok: true, room, seatToken: seatResult.seatToken };
   }
 
   async lockRoom(roomId) {

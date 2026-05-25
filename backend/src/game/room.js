@@ -338,6 +338,26 @@ class GameRoom {
     return { ok: true };
   }
 
+  /** Host ends the match early after a round completes (before all rounds are played). */
+  endMatchEarly() {
+    if (this.state !== GAME_STATES.ROUND_END) {
+      return { error: 'Can only end the match after a round finishes' };
+    }
+
+    this.state = GAME_STATES.GAME_END;
+    const lastRound = this.roundScores[this.roundScores.length - 1] ?? {};
+
+    return {
+      ok: true,
+      gameOver: true,
+      roundScore: lastRound,
+      finalScores: this._getFinalRanking(),
+      roundWinnerId: this.matchEconomy?.lastRoundWinner ?? null,
+      roundPot: this.matchEconomy?.lastRoundPot ?? 0,
+      matchWinnings: { ...(this.matchEconomy?.roundWinnings ?? {}) },
+    };
+  }
+
   _getFinalRanking() {
     return this.turnOrder
       .map(pid => ({ id: pid, name: this.players.find(p => p.id === pid)?.name, score: this.scores[pid] }))

@@ -3,11 +3,9 @@ import { socket, refreshWallet, SERVER_URL } from '../socket';
 import { useGameStore } from '../store/gameStore';
 import {
   getStoredRoomId,
-  getStoredSeatToken,
+  getLeftRoom,
   setStoredRoomId,
   setStoredSeatToken,
-  getLeftRoom,
-  setLeftRoom,
   screenForGameState,
 } from '../utils/session';
 
@@ -17,42 +15,6 @@ function applyGameState(state, { setGameState, setScreen }) {
   const currentScreen = useGameStore.getState().screen;
   if (newScreen !== currentScreen) {
     setScreen(newScreen);
-  }
-}
-
-function saveSeatFromResponse(res) {
-  if (res.seatToken) setStoredSeatToken(res.seatToken);
-}
-
-function tryRejoinRoom({ setGameState, setScreen, setError, setWallet }) {
-  if (getLeftRoom()) return;
-
-  const roomId = getStoredRoomId();
-  if (!roomId) return;
-
-  const { playerId, playerName } = useGameStore.getState();
-  const seatToken = getStoredSeatToken();
-
-  const onResult = (res) => {
-    if (res.error) {
-      if (res.error === 'Room not found' || res.error === 'Invalid seat token') {
-        setStoredRoomId('');
-        setStoredSeatToken('');
-      }
-      return;
-    }
-    setLeftRoom(false);
-    setStoredRoomId(res.state.roomId);
-    saveSeatFromResponse(res);
-    applyGameState(res.state, { setGameState, setScreen });
-    if (res.wallet) setWallet(res.wallet);
-    if (res.reconnected) setError(null);
-  };
-
-  if (seatToken) {
-    socket.emit('room:rejoin', { roomId, playerId, seatToken, playerName }, onResult);
-  } else {
-    socket.emit('room:join', { roomId, playerId, playerName }, onResult);
   }
 }
 
@@ -68,9 +30,17 @@ export function useSocketEvents() {
       setError(null);
       const { playerId } = useGameStore.getState();
       refreshWallet(playerId, setWallet);
-      tryRejoinRoom({ setGameState, setScreen, setError, setWallet });
     });
-    socket.on('disconnect', () => setConnected(false));
+
+    socket.on('disconnect', () => {
+      setConnected(false);
+      const { screen } = useGameStore.getState();
+      if (screen !== 'home' && screen !== 'results') {
+        setScreen('home');
+        setError('Disconnected — use Join Room with your code and name to rejoin.');
+      }
+    });
+
     socket.on('connect_error', (err) => {
       setConnected(false);
       const detail = err?.message || 'connection failed';
@@ -124,15 +94,7 @@ export function useSocketEvents() {
     socket.on('room:player_reconnected', () => {});
     socket.on('room:player_left', () => {});
 
-    if (getStoredRoomId() && !getLeftRoom()) {
-      if (socket.connected) {
-        tryRejoinRoom({ setGameState, setScreen, setError, setWallet });
-      } else {
-        socket.connect();
-      }
-    } else {
-      socket.connect();
-    }
+    socket.connect();
 
     return () => socket.removeAllListeners();
   }, []);

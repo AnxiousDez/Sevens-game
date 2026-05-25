@@ -356,6 +356,25 @@ module.exports = function registerSocketHandlers(io) {
       }
     });
 
+    socket.on('game:end_match', async ({}, cb) => {
+      try {
+        const info = roomManager.getPlayerBySocket(socket.id);
+        if (!info) return cb({ error: 'Not in a room' });
+
+        const room = roomManager.getRoom(info.roomId);
+        if (!room) return cb({ error: 'Room not found' });
+        if (room.hostId !== info.playerId) return cb({ error: 'Only host can end the match' });
+
+        const result = room.endMatchEarly();
+        if (result.error) return cb({ error: result.error });
+
+        cb({ ok: true });
+        await handleRoundEnd(io, room, result);
+      } catch (e) {
+        cb({ error: e.message });
+      }
+    });
+
     socket.on('game:next_round', ({}, cb) => {
       try {
         const info = roomManager.getPlayerBySocket(socket.id);

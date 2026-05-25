@@ -33,11 +33,95 @@ body {
 /* ── Error Banner ──────────────────────────────────────── */
 .error-banner {
   background: #7f1d1d; color: #fca5a5;
-  padding: 10px 20px; text-align: center;
-  cursor: pointer; font-size: 14px;
-  display: flex; gap: 12px; justify-content: center; align-items: center;
+  padding: 10px 12px;
+  cursor: pointer; font-size: 13px;
+  display: flex; gap: 8px; justify-content: space-between; align-items: flex-start;
+  flex-shrink: 0;
+  max-width: 100vw;
 }
-.dismiss { opacity: 0.7; }
+.error-banner-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+  line-height: 1.35;
+}
+.dismiss { opacity: 0.7; flex-shrink: 0; }
+
+.resume-banner {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.resume-banner p { margin: 0 0 8px; }
+.btn-text-dismiss {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+.btn-text-dismiss:hover { color: var(--text); }
+
+.round-end-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+.btn-end-match {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  background: rgba(127, 29, 29, 0.25);
+  color: #fca5a5;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.btn-end-match:hover {
+  background: rgba(127, 29, 29, 0.45);
+}
+
+.landscape-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(10, 15, 22, 0.96);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.landscape-overlay-card {
+  text-align: center;
+  max-width: 320px;
+}
+.landscape-overlay-card h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px;
+  margin: 12px 0 8px;
+  color: var(--accent2);
+}
+.landscape-overlay-card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.landscape-icon {
+  font-size: 48px;
+  animation: landscape-wiggle 1.5s ease-in-out infinite;
+}
+@keyframes landscape-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(90deg); }
+}
 
 /* ── HOME SCREEN ───────────────────────────────────────── */
 .home-screen {
@@ -1205,6 +1289,27 @@ input:focus { border-color: var(--accent); }
 .btn-rules-compact:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* ── MOBILE PORTRAIT (general UI fit) ──────────────────── */
+@media (max-width: 640px) {
+  .home-screen {
+    padding: 16px 12px;
+    gap: 20px;
+    justify-content: flex-start;
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
+  .game-title { letter-spacing: 0.08em; font-size: clamp(40px, 12vw, 56px); }
+  .game-subtitle { font-size: 11px; letter-spacing: 0.15em; }
+  .suit-bg { font-size: 28px; letter-spacing: 8px; }
+  .home-card { padding: 20px 16px; max-width: 100%; }
+  .home-wallet { flex-wrap: wrap; font-size: 12px; }
+  .tab-bar button { font-size: 13px; padding: 10px 8px; }
+  .config-row label { font-size: 12px; }
+  .overlay-card { max-width: calc(100vw - 24px); padding: 20px 16px; }
+  .round-end-card h2 { font-size: 18px; }
+  .lobby-screen { padding: 12px; }
+  .lobby-header h2 { font-size: 18px; }
 }
 
 /* ── MOBILE ────────────────────────────────────────────── */

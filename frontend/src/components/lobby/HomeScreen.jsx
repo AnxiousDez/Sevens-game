@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
 import { socket, refreshWallet, SERVER_URL } from '../../socket';
 import { useGameStore } from '../../store/gameStore';
-import { setStoredRoomId, setStoredSeatToken, screenForGameState, setLeftRoom } from '../../utils/session';
+import {
+  setStoredRoomId,
+  setStoredSeatToken,
+  getStoredRoomId,
+  getStoredSeatToken,
+  hasPendingRejoin,
+  screenForGameState,
+  setLeftRoom,
+} from '../../utils/session';
+import { tryLockLandscape } from '../ui/LandscapeGate';
 import ShopPanel from '../shop/ShopPanel';
 import RulesPanel from '../ui/RulesPanel';
 
@@ -13,9 +22,19 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [pendingRejoin, setPendingRejoin] = useState(false);
   const [config, setConfig] = useState({ maxPlayers: 4, minPlayers: 3, turnTimerSeconds: 30 });
 
   const ready = name.trim().length >= 2;
+
+  useEffect(() => {
+    if (hasPendingRejoin()) {
+      setRoomCode(getStoredRoomId());
+      setTab('join');
+      setPendingRejoin(true);
+    }
+    tryLockLandscape();
+  }, []);
 
   useEffect(() => {
     if (!socket.connected) socket.connect();
@@ -58,6 +77,24 @@ export default function HomeScreen() {
     socket.connect();
   }
 
+  function onJoinResult(res) {
+    setLoading(false);
+    if (res.error) {
+      if (res.error.includes('seat token') || res.error.includes('Invalid seat')) {
+        setStoredSeatToken('');
+      }
+      return setError(res.error);
+    }
+    setLeftRoom(false);
+    setError(null);
+    setStoredRoomId(res.state.roomId);
+    if (res.seatToken) setStoredSeatToken(res.seatToken);
+    if (res.wallet) setWallet(res.wallet);
+    setGameState(res.state);
+    setScreen(screenForGameState(res.state.state));
+    tryLockLandscape();
+  }
+
   function handleCreate() {
     if (!ready || loading) return;
     setLoading(true);
@@ -71,6 +108,7 @@ export default function HomeScreen() {
         if (res.wallet) setWallet(res.wallet);
         setGameState(res.state);
         setScreen(screenForGameState(res.state.state));
+        tryLockLandscape();
       });
     });
   }
@@ -78,18 +116,28 @@ export default function HomeScreen() {
   function handleJoin() {
     if (!ready || !roomCode.trim() || loading) return;
     setLoading(true);
+    const code = roomCode.trim().toUpperCase();
+    const seatToken = getStoredSeatToken();
+    const payload = {
+      roomId: code,
+      playerId,
+      playerName: name.trim(),
+    };
+
     connect(() => {
-      socket.emit('room:join', { roomId: roomCode.trim().toUpperCase(), playerId, playerName: name.trim() }, (res) => {
-        setLoading(false);
-        if (res.error) return setError(res.error);
-        setLeftRoom(false);
-        setStoredRoomId(res.state.roomId);
-        if (res.seatToken) setStoredSeatToken(res.seatToken);
-        if (res.wallet) setWallet(res.wallet);
-        setGameState(res.state);
-        setScreen(screenForGameState(res.state.state));
-      });
+      if (seatToken) {
+        socket.emit('room:rejoin', { ...payload, seatToken }, onJoinResult);
+      } else {
+        socket.emit('room:join', payload, onJoinResult);
+      }
     });
+  }
+
+  function dismissResume() {
+    setPendingRejoin(false);
+    setStoredRoomId('');
+    setStoredSeatToken('');
+    setRoomCode('');
   }
 
   return (
@@ -111,6 +159,13 @@ export default function HomeScreen() {
       </div>
 
       <div className="home-card">
+        {pendingRejoin && (
+          <div className="resume-banner">
+            <p>You were in room <strong>{getStoredRoomId()}</strong>. Enter your name and tap <strong>Join Game</strong> to return — or start fresh below.</p>
+            <button type="button" className="btn-text-dismiss" onClick={dismissResume}>Start fresh</button>
+          </div>
+        )}
+
         <div className="name-field">
           <label>Your Name</label>
           <input
@@ -161,7 +216,7 @@ export default function HomeScreen() {
               className="code-input"
               onKeyDown={e => e.key === 'Enter' && handleJoin()}
             />
-            <p className="join-hint">Reconnecting? Use the same name you joined with.</p>
+            <p className="join-hint">Rejoining? Use the same name and room code, then tap Join.</p>
             <button className="btn-primary" disabled={!ready || !roomCode.trim() || loading} onClick={handleJoin}>
               {loading ? 'Joining...' : 'Join Game'}
             </button>

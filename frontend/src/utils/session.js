@@ -19,15 +19,24 @@ export function setStoredRoomId(roomId) {
 }
 
 export function getStoredSeatToken() {
-  return localStorage.getItem(SEAT_TOKEN_KEY) || '';
+  return localStorage.getItem(SEAT_TOKEN_KEY)
+    || sessionStorage.getItem(SEAT_TOKEN_KEY)
+    || '';
 }
 
 export function setStoredSeatToken(token) {
   if (token) {
     localStorage.setItem(SEAT_TOKEN_KEY, token);
+    sessionStorage.setItem(SEAT_TOKEN_KEY, token);
   } else {
     localStorage.removeItem(SEAT_TOKEN_KEY);
+    sessionStorage.removeItem(SEAT_TOKEN_KEY);
   }
+}
+
+/** Saved room from a prior session — user must tap Join (no auto-rejoin) */
+export function hasPendingRejoin() {
+  return !!getStoredRoomId() && !getLeftRoom();
 }
 
 export function clearSession() {

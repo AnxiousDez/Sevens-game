@@ -10,7 +10,6 @@ import {
   screenForGameState,
   setLeftRoom,
 } from '../../utils/session';
-import { tryLockLandscape } from '../ui/LandscapeGate';
 import ShopPanel from '../shop/ShopPanel';
 import RulesPanel from '../ui/RulesPanel';
 
@@ -33,7 +32,6 @@ export default function HomeScreen() {
       setTab('join');
       setPendingRejoin(true);
     }
-    tryLockLandscape();
   }, []);
 
   useEffect(() => {
@@ -92,7 +90,6 @@ export default function HomeScreen() {
     if (res.wallet) setWallet(res.wallet);
     setGameState(res.state);
     setScreen(screenForGameState(res.state.state));
-    tryLockLandscape();
   }
 
   function handleCreate() {
@@ -108,7 +105,6 @@ export default function HomeScreen() {
         if (res.wallet) setWallet(res.wallet);
         setGameState(res.state);
         setScreen(screenForGameState(res.state.state));
-        tryLockLandscape();
       });
     });
   }
@@ -145,24 +141,21 @@ export default function HomeScreen() {
       {showShop && <ShopPanel onClose={() => setShowShop(false)} />}
       {showRules && <RulesPanel onClose={() => setShowRules(false)} />}
 
-      <div className="home-hero">
-        <div className="suit-bg">♠ ♥ ♦ ♣</div>
+      <header className="home-hero">
         <h1 className="game-title">SEVENS</h1>
-        <p className="game-subtitle">The strategic card game</p>
+        <p className="game-subtitle">Strategic card game</p>
         <div className="home-actions">
-          <div className="home-wallet">
-            <span>🪙 {wallet ? wallet.coins : '—'} coins</span>
-            <button type="button" className="btn-shop-link" onClick={() => setShowShop(true)}>Shop</button>
-          </div>
-          <button type="button" className="btn-rules-link" onClick={() => setShowRules(true)}>How to Play</button>
+          <span className="home-wallet-pill">🪙 {wallet ? wallet.coins : '—'}</span>
+          <button type="button" className="btn-chip" onClick={() => setShowShop(true)}>Shop</button>
+          <button type="button" className="btn-chip" onClick={() => setShowRules(true)}>Rules</button>
         </div>
-      </div>
+      </header>
 
       <div className="home-card">
         {pendingRejoin && (
           <div className="resume-banner">
-            <p>You were in room <strong>{getStoredRoomId()}</strong>. Enter your name and tap <strong>Join Game</strong> to return — or start fresh below.</p>
-            <button type="button" className="btn-text-dismiss" onClick={dismissResume}>Start fresh</button>
+            <span>Room <strong>{getStoredRoomId()}</strong> — join with your name</span>
+            <button type="button" className="btn-text-dismiss" onClick={dismissResume}>Clear</button>
           </div>
         )}
 

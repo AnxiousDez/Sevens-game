@@ -11,7 +11,7 @@ export default function App() {
   useSocketEvents();
 
   const { screen, error, setError } = useGameStore();
-  const useLandscape = screen !== 'results';
+  const useLandscape = screen === 'game' || screen === 'lobby' || screen === 'round_end';
 
   return (
     <LandscapeGate active={useLandscape}>
